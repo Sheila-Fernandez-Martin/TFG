@@ -35,16 +35,21 @@ Data/
     ├── 2017-11-10
     ├── 2017-11-15
     └── 2017-11-20
-├── 01_analisis_limpieza.ipynb # Análisis exploratorio y limpieza de datos
-├── 02_preparacion_datos.py # Generación de datasets limpios y equilibrados
-├── funciones.py # Funciones auxiliares para el preprocesado
-├── 03_model.py # Modelo con Hill Climbing + BIC
-├── 03_modelo_K2.py # Modelo Hill Climbing + K2 score
-├── 03_modelo_TreeSearch.py # Modelo TreeSearch
-├── 04_Model.ipynb # Análisis y resultados del mejor modelo
-├── /Red Bayesiana/Data/ # Datos preparados (data_A.csv, data_B.csv, data_C.csv)
-└── README.md # Este documento
-
+Notebook/
+    ├── 01_analisis_limpieza.ipynb # Análisis exploratorio y limpieza de datos
+    ├── 02_preparacion_datos.py # Generación de datasets limpios y equilibrados
+    └── funciones.py # Funciones auxiliares para el preprocesado
+Red Bayesiana/
+    ├── 03_model.py # Modelo con Hill Climbing + BIC
+    ├── 03_modelo_K2.py # Modelo Hill Climbing + K2 score
+    ├── 03_modelo_TreeSearch.py # Modelo TreeSearch
+    ├── 04_Model.ipynb # Análisis y resultados del mejor modelo
+    └──  Data/ # Datos preparados
+        ├── data_A.csv
+        ├── data_B.csv
+        └── data_C.csv
+README.md # Este documento
+```
 
 ## 📊 Flujo de trabajo
 
