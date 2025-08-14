@@ -8,6 +8,9 @@ from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, Expe
 from pgmpy.inference import VariableElimination
 from sklearn.model_selection import train_test_split
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
 letter = 'A'
 df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',', index_col=0)
 
@@ -17,15 +20,14 @@ df = df.drop(columns=['DAY'])
 df = df[df['Activity'] != 0]
 
 # Dividimos ahora trainval en train y validación
-df_train, df_val = train_test_split(df, test_size=0.2, random_state=40, stratify=df['Activity'])
+df_train, df_val = train_test_split(df, test_size=0.16, random_state=40, stratify=df['Activity'])
 
 # Aprender la estructura de la red bayesiana
 hc = HillClimbSearch(df_train)
-
 model = hc.estimate(scoring_method='bic-d', epsilon=1e-13, max_iter=1e6)
 
 bn = DiscreteBayesianNetwork(model.edges())
-bn.fit(df_train, estimator=MaximumLikelihoodEstimator, n_jobs=10)
+bn.fit(df_train, estimator=MaximumLikelihoodEstimator, n_jobs=7)
 
 infer = VariableElimination(bn)
 
@@ -48,8 +50,7 @@ accuracy = correct / len(df_val)
 # Calculamos las frecuencias de las predicciones
 pred = list(set(predictions))
 frecuencias = {p: predictions.count(p) for p in pred}
-
-print(f"\n\033[1;32mPrecisión del modelo: {accuracy:.2f}\033[0m")
+print(f"\n\033[1;32mPrecisión del modelo: {accuracy:.2%}\033[0m")
 print(f"\033[1;34mPredicciones\033[0m:")
 for pred in frecuencias:
     print(f"{pred}: {frecuencias[pred]} veces")

@@ -196,6 +196,8 @@ def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, obje
     }
 
     tbegin,tend = min(timestamps[0],t1[0],timestamps_floor[0]),max(timestamps[-1],t2[-1],timestamps_floor[-1])
+    #tbegin,tend = t1[0],t2[-1] NO GENERA CAMBIOS
+
     # Convertimos 
     data = {}
 
@@ -258,6 +260,7 @@ def clean_repeats(df):
     # Iterate through the DataFrame and remove repeated rows
     remove_indices = []
     for i in range(len(df_cleaned) - 1):
+        # Check if the current row is equal to the next row
         if df_cleaned.iloc[i].equals(df_cleaned.iloc[i + 1]):
             remove_indices.append(i + 1)
     df_cleaned.drop(index=remove_indices, inplace=True)
