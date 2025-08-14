@@ -6,6 +6,35 @@ Se trabaja con datos reales recogidos por sensores, un suelo inteligente, baliza
 
 ## 📂 Estructura del proyecto
 
+``` 
+Data/
+├── Test/
+│   ├── 2017-11-9/
+│   │   ├── 2017-11-9-A/
+│   │   │   ├── 2017-11-9-A-acceleration.csv
+│   │   │   ├── 2017-11-9-A-floor.csv
+│   │   │   ├── 2017-11-9-A-proximity.csv     
+│   │   │   └── 2017-11-9-A-sensors.csv
+│   │   ├── 2017-11-9-B     
+│   │   └── 2017-11-9-C
+│   ├── 2017-11-13
+│   └── 2017-11-21
+└── Train/
+    ├── 2017-10-31/
+    │   ├── 2017-10-31-A/
+    │   │   ├── 2017-10-31-A-acceleration.csv
+    │   │   ├── 2017-10-31-A-activity.csv
+    │   │   ├── 2017-10-31-A-floor.csv
+    │   │   ├── 2017-10-31-A-proximity.csv     
+    │   │   └── 2017-10-31-A-sensors.csv
+    │   ├── 2017-10-31-B     
+    │   └── 2017-10-31-C
+    ├── 2017-11-02
+    ├── 2017-11-03
+    ├── 2017-11-08
+    ├── 2017-11-10
+    ├── 2017-11-15
+    └── 2017-11-20
 ├── 01_analisis_limpieza.ipynb # Análisis exploratorio y limpieza de datos
 ├── 02_preparacion_datos.py # Generación de datasets limpios y equilibrados
 ├── funciones.py # Funciones auxiliares para el preprocesado
