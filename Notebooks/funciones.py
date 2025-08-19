@@ -108,13 +108,50 @@ def dicts_s_a(sensors, activities, floor):
     Returns:
         data -- A dictionary with timestamps as keys and a list of sensor states and activities as values.
     """
+    sensor_open_close = {
+        'C01': {'open': 'Open', 'close': 'Close'}, 
+        'C02': {'open': 'Open', 'close': 'Close'}, 
+        'C04': {'open': 'Open', 'close': 'Close'}, 
+        'C05': {'open': 'Open', 'close': 'Close'}, 
+        'C07': {'open': 'No present', 'close': 'Present'}, 
+        'C08': {'open': 'Open', 'close': 'Close'}, 
+        'C09': {'open': 'Open', 'close': 'Close'}, 
+        'C10': {'open': 'Open', 'close': 'Close'}, 
+        'C12': {'open': 'No present', 'close': 'Present'}, 
+        'C13': {'open': 'Open', 'close': 'Close'}, 
+        'C14': {'open': 'Pressure', 'close': 'No Pressure'}, 
+        'D01': {'open': 'Open', 'close': 'Close'}, 
+        'D02': {'open': 'Open', 'close': 'Close'}, 
+        'D03': {'open': 'Open', 'close': 'Close'}, 
+        'D04': {'open': 'Open', 'close': 'Close'}, 
+        'D05': {'open': 'Open', 'close': 'Close'}, 
+        'D07': {'open': 'Open', 'close': 'Close'}, 
+        'D08': {'open': 'Open', 'close': 'Close'}, 
+        'D09': {'open': 'Open', 'close': 'Close'}, 
+        'D10': {'open': 'Open', 'close': 'Close'}, 
+        'H01': {'open': 'Open', 'close': 'Close'}, 
+        'M01': {'open': 'Open', 'close': 'Close'}, 
+        'S09': {'open': 'Pressure', 'close': 'No Pressure'}, 
+        'SM1': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM3': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM4': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM5': {'open': 'Movement', 'close': 'No movement'}, 
+        'TV0': {'open': 'Open', 'close': 'Close'}
+    }
 
     timestamps = [x.split(" ")[1] for x in sensors["TIMESTAMP"].to_list()]
     # Crea una lista con los sensores del df sensors
     objects = sensors["OBJECT"].to_list()
     # Crea una lista con los estados del df sensors
     states = sensors["STATE"].to_list()
-
+    #if states[0] == sensor_open_close[objects[0]]['close']:
+    #    timestamps.pop(0)  # Remove the first timestamp if the first state is 'close'
+    #    objects.pop(0)  # Remove the first object if the first state is 'close'
+    #    states.pop(0)  # Remove the first state if the first state is 'close'
+    #if states[-1] == sensor_open_close[objects[-1]]['open']:
+    #    timestamps.pop(-1)
+    #    objects.pop(-1)  # Remove the last object if the last state is 'open'
+    #    states.pop(-1)  # Remove the last state if the last state is 'open'
     timestamps_floor = [x.split(" ")[1] for x in floor["TIMESTAMP"].to_list()]
 
     # Ponemos ambos timestamps en el mismo formato: 'HH:MM:SS'
@@ -156,7 +193,7 @@ def dicts_s_a(sensors, activities, floor):
 
     return dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects
 
-def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects, global_sensors):
+def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2,objects, global_sensors):
     """
     Creates a dictionary with keys the timestamps and values the activity and sensors at that time.
     Arguments:
@@ -239,16 +276,18 @@ def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, obje
 
 
     data_pd = []
-    sorted_list_of_sensors = sorted(list(global_sensors))
+    all_sen = all_sensors()
+    sorted_list_of_sensors = sorted(all_sen)
     devices = [f"{i+1:02d},{j+1:02d}" for i in range(5) for j in range(10)]  # Asumiendo 5 filas y 9 columnas
 
     for t in enumerate_seconds(tbegin,tend):
         # Crea una lista binaria + número de actividad
-        data_pd.append(create_bit_vector(sorted_list_of_sensors+devices,data[t][1:])+[create_act_number(data[t][0])])
+        data_pd.append(create_bit_vector(sorted_list_of_sensors+devices,data[t][:])+[create_act_number(data[t][0])])
     df = pd.DataFrame(data_pd, columns=sorted_list_of_sensors+devices+["Activity"])
     return df
 
 def clean_repeats(df):
+
     """
     Cleans the DataFrame by removing repeated following rows.
     Arguments:
@@ -266,3 +305,30 @@ def clean_repeats(df):
     df_cleaned.drop(index=remove_indices, inplace=True)
 
     return df_cleaned.reset_index(drop=True)
+
+def all_sensors():
+    """
+    Returns a set of all sensors used in the dataset, Training and test.
+    Returns:
+        sensors -- A set of all sensors.
+    """
+    sensors = [
+        'C01', 'C02', 'C04', 'C05', 'C07', 'C08', 'C09', 'C10',
+        'C12', 'C13', 'C14', 'D01', 'D02', 'D03', 'D04', 'D05',
+        'D07', 'D08', 'D09', 'D10', 'H01', 'M01', 'S09',
+        'SM1', 'SM3', 'SM4', 'SM5', 'TV0'
+    ]
+    return sensors  
+
+def all_acivities():
+    """
+    Returns a set of all activities used in the dataset, Training and test.
+    Returns:
+        activities -- A set of all activities.
+    """
+    activities = ['Idle', 'Act01', 'Act02', 'Act03', 'Act04', 'Act05',
+                  'Act06', 'Act07', 'Act08', 'Act09', 'Act10', 'Act11',
+                  'Act12', 'Act13', 'Act14', 'Act15', 'Act16', 'Act17',
+                  'Act18', 'Act19', 'Act20', 'Act21', 'Act22', 'Act23',
+                  'Act24']
+    return activities   

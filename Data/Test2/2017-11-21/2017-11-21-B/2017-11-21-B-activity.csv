@@ -1,0 +1,14 @@
+TIMESTAMP,Act22,Act17,Act13,Activity_1,Activity_2
+2017-11-21 16:10:30,False,False,False,Idle,Idle
+2017-11-21 16:11:00,True,False,False,Act22,Act22
+2017-11-21 16:11:30,True,True,False,Act22,Act17
+2017-11-21 16:12:00,False,True,False,Act17,Act17
+2017-11-21 16:12:30,False,True,False,Act17,Act17
+2017-11-21 16:13:00,True,False,False,Act22,Act22
+2017-11-21 16:13:30,True,False,False,Act22,Act22
+2017-11-21 16:14:00,True,False,False,Act22,Act22
+2017-11-21 16:14:30,True,False,False,Act22,Act22
+2017-11-21 16:15:00,False,False,False,Idle,Idle
+2017-11-21 16:15:30,False,False,False,Idle,Idle
+2017-11-21 16:16:00,False,False,True,Act13,Act13
+2017-11-21 16:16:30,False,False,True,Act13,Act13
