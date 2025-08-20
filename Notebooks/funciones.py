@@ -177,16 +177,21 @@ def dicts_s_a(sensors, activities, floor):
 
     for s in set(objects):
         dic1[s] = []
+
     for a in set(acts):
         dic2[a] = []
+
     for d in set(devices):
         dic3[d] = []
+
     # A dic1 le asocia como claves los sensores y como valores una lista de tuplas (estado, hora)
     for i in range(len(timestamps)):
         dic1[objects[i]].append((states[i],timestamps[i]))
+
     # A dic2 le asocia como claves las actividades y como valores una lista de tuplas (inicio, fin)
     for i in range(len(t1)):
         dic2[acts[i]].append((t1[i],t2[i]))
+        
     # A dic3 le asocia como claves los dispositivos y como valores una lista de tuplas (hora)
     for i in range(len(timestamps_floor)):
         dic3[suelos[i]].append((timestamps_floor[i]))
@@ -304,6 +309,27 @@ def clean_repeats(df):
             remove_indices.append(i + 1)
     df_cleaned.drop(index=remove_indices, inplace=True)
 
+    return df_cleaned.reset_index(drop=True)
+def clean_repeats_activity0(df):
+
+    """
+    Cleans the DataFrame by removing repeated following rows.
+    Only removes when Activity == 0.
+    Arguments:
+        df -- A DataFrame with sensor states.
+    Returns:
+        df_cleaned -- A cleaned DataFrame with no repeated following rows (for Activity==0).
+    """
+    df_cleaned = df.copy()
+    remove_indices = []
+    for i in range(len(df_cleaned) - 1):
+        # Check if the current row is equal to the next row
+        if df_cleaned.iloc[i].equals(df_cleaned.iloc[i + 1]):
+            act_val = df_cleaned.iloc[i + 1]["Activity"]
+            if act_val == 0 or str(act_val).strip() == "0":
+                remove_indices.append(i + 1)
+
+    df_cleaned.drop(index=remove_indices, inplace=True)
     return df_cleaned.reset_index(drop=True)
 
 def all_sensors():

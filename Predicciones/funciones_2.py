@@ -77,7 +77,7 @@ def dicts_s_a(sensors, floor):
     Returns:
         data -- A dictionary with timestamps as keys and a list of sensor states and activities as values.
     """
-
+    
     timestamps = [x.split(" ")[1] for x in sensors["TIMESTAMP"].to_list()]
     # Crea una lista con los sensores del df sensors
     objects = sensors["OBJECT"].to_list()
@@ -102,6 +102,7 @@ def dicts_s_a(sensors, floor):
 
     for d in set(devices):
         dic3[d] = set()
+
     # A dic1 le asocia como claves los sensores y como valores una lista de tuplas (estado, hora)
     for i in range(len(timestamps)):
         dic1[objects[i]].append((states[i],timestamps[i]))
@@ -110,8 +111,8 @@ def dicts_s_a(sensors, floor):
     for i in range(len(timestamps_floor)):
         dic3[suelos[i]].add(timestamps_floor[i])
 
-    for d in devices:
-        dic3[d] = sorted(list(dic3[d]))
+    #for d in devices:
+    #    dic3[d] = sorted(list(dic3[d]))
 
     return dic1, dic3, timestamps, timestamps_floor, objects
 
@@ -153,9 +154,7 @@ def sensor_activity(dic1, dic3, timestamps, timestamps_floor, objects, global_se
         'SM5': {'open': 'Movement', 'close': 'No movement'}, 
         'TV0': {'open': 'Open', 'close': 'Close'}
     }
-
     tbegin,tend = min(timestamps[0],timestamps_floor[0]),max(timestamps[-1],timestamps_floor[-1])
-
     # Convertimos 
     data = {}
 

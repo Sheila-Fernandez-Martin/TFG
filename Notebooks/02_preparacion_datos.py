@@ -58,8 +58,9 @@ for letter in ["A", "B", "C"]:
         dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects = dicts_s_a(sensors, activities, floor)
         # Creamos un DataFrame con los datos
         df = sensor_activity(dic1, dic2,dic3, timestamps, timestamps_floor, t1, t2, objects, global_sensors)
-        df= clean_repeats(df)
-        
+        #df= clean_repeats(df)
+        df = clean_repeats_activity0(df)
+
         # Eliminamos las filas tales que tiene un valor 0 en la columna 'Activity'
         # df = df[df['Activity'] != 0]
         # Añadimos el DataFrame a la lista
