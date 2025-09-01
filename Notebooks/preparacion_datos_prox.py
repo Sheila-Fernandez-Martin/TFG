@@ -15,11 +15,13 @@ days = ['2017-10-31', '2017-11-02', '2017-11-03', '2017-11-08', '2017-11-10', '2
 for letter in ["A", "B", "C"]:
     # Creamos dos listas para almacenar los DataFrames de actividades y sensores
     all_activities = []
-    all_sensores = []
+    all_sensors = []
     all_floors = []
+    all_objects_prox = []
     
     # Creamos una lista para almacenar los sensores detectados
     global_sensors = set()
+    global_sensors_prox = set()
     devices = [ f"0{i+1},0{j+1}" for i in range(5) for j in range(10) ]  # Asumiendo 5 filas y 9 columnas
 
     for day in days:
@@ -27,11 +29,12 @@ for letter in ["A", "B", "C"]:
             act_path = f"Data/Training2/{day}/{day}-{letter}/{day}-{letter}-activity.csv"
             sen_path = f"Data/Training2/{day}/{day}-{letter}/{day}-{letter}-sensors.csv"
             floor_path = f"Data/Training2/{day}/{day}-{letter}/{day}-{letter}-floor.csv"
+            prox_path = f"Data/Training2/{day}/{day}-{letter}/{day}-{letter}-proximity.csv"
 
             df_act = pd.read_csv(act_path, sep=";")
             df_sen = pd.read_csv(sen_path, sep=";")
             df_floor = pd.read_csv(floor_path, sep=";")
-            
+            df_prox = pd.read_csv(prox_path, sep=";")
             # Eliminamos las filas de floor con device '01,'0A' y '02,0A'
             df_floor = df_floor[~df_floor['DEVICE'].isin(['01,0A', '02,0A', '01,0B'])]
 
@@ -39,11 +42,14 @@ for letter in ["A", "B", "C"]:
             df_act["DAY"] = day
             df_sen["DAY"] = day
             df_floor["DAY"] = day
+            df_prox["DAY"] = day
 
             all_activities.append(df_act)
-            all_sensores.append(df_sen)
+            all_sensors.append(df_sen)
             all_floors.append(df_floor)
+            all_objects_prox.append(df_prox)
             global_sensors.update(df_sen["OBJECT"].unique())
+            global_sensors_prox.update(df_sen["OBJECT"].unique())
 
         except FileNotFoundError:
             print(f"Archivos no encontrados para el día {day} - {letter}. Saltando.")
@@ -53,14 +59,15 @@ for letter in ["A", "B", "C"]:
     DATA = []
     for i in range(len(days)):
         activities = all_activities[i]
-        sensors = all_sensores[i]
+        sensors = all_sensors[i]
         floor = all_floors[i]
+        objects_prox = all_objects_prox[i]
         
-        dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects = dicts_s_a(sensors, activities, floor)
+        dic1, dic2, dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2, objects = dicts_s_a_prox(sensors, activities, floor, objects_prox)
         # Creamos un DataFrame con los datos
-        df = sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects, global_sensors)
-        df= clean_repeats(df) 
-        #df = clean_repeats_activity0(df) #comprime solo las 0
+        df = sensor_activity_prox(dic1, dic2,dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2, objects, global_sensors)
+        #df= clean_repeats(df) 
+        df = clean_repeats_activity0(df) #comprime solo las 0
 
         # Añadimos el DataFrame a la lista
         DATA.append(df)
@@ -70,10 +77,10 @@ for letter in ["A", "B", "C"]:
     
     # Unimos todos los DataFrames por filas en uno solo
     final_df = pd.concat(DATA, ignore_index=True)
-    #final_df["Activity"] = pd.to_numeric(final_df["Activity"], errors="coerce").fillna(0).astype(int)
-    #final_df["ACTIVITY_ANTERIOR"] = final_df["Activity"].shift(1, fill_value=0).astype(int)
-    #cols = list(final_df.columns)
-    #cols.insert(cols.index("Activity")+1, cols.pop(cols.index("ACTIVITY_ANTERIOR")))
-    #final_df = final_df[cols]   
+    final_df["Activity"] = pd.to_numeric(final_df["Activity"], errors="coerce").fillna(0).astype(int)
+    final_df["ACTIVITY_ANTERIOR"] = final_df["Activity"].shift(1, fill_value=0).astype(int)
+    cols = list(final_df.columns)
+    cols.insert(cols.index("Activity")+1, cols.pop(cols.index("ACTIVITY_ANTERIOR")))
+    final_df = final_df[cols]   
     # Guardamos el DataFrame en un archivo CSV
     final_df.to_csv(f'Red Bayesiana/Data/data_{letter}.csv', index=False)

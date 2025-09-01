@@ -5,7 +5,11 @@ import networkx as nx
 from pgmpy.estimators import HillClimbSearch
 from pgmpy.models import BayesianNetwork as DiscreteBayesianNetwork
 from pgmpy.estimators import MaximumLikelihoodEstimator
-import pickle
+from sklearn.model_selection import train_test_split
+from pgmpy.inference import VariableElimination
+from collections import Counter, defaultdict
+
+
 
 # MODELO K2  
 # -------------------------
@@ -16,14 +20,15 @@ import pickle
 # B, 9
 # C, 14
 
-letter = 'A'  # Cambiar según la letra
+letter = 'B'  # Cambiar según la letra
 # Cargamos los datos
 df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',')
 
 # Eliminamos la ultima columna que no contiene información relevante
 df = df.drop(columns=['DAY'])
-#df = df.drop(columns=['SM4','SM3','SM1','SM5'])
+#df = df.drop(columns=['ACTIVITY_ANTERIOR'])
 
+#df = df.drop(columns=['SM4','SM3','SM1','SM5'])
 
 # ----------------------------
 # ZONAS DE SUELO
@@ -78,9 +83,9 @@ ACTIVITY_SENSORS = {
     3: {"D01","D02","D10","C04","POT DRAWER","FRIDGE","FOOD CUPBOARD"} | FLOOR_KITCHEN,                  # Prepare lunch COCINA
     4: {"D01","D02","D10","C04","C09","02,08","POT DRAWER","FRIDGE","FOOD CUPBOARD"} | FLOOR_KITCHEN,                  # Prepare dinner COCINA
     5: {"C02","C05", "POT DRAWER","FRIDGE","FOOD CUPBOARD"} |FLOOR_KITCHEN, # Breakfast COCINA/TABLE/SALON/DORMITORIO
-    6: {"C02","C05","POT DRAWER","FRIDGE","FOOD CUPBOARD"} | FLOOR_KITCHEN, # Lunch COCINA/TABLE/SALON/DORMITORIO
-    7: {"C02","C05","POT DRAWER","FRIDGE","FOOD CUPBOARD"} | FLOOR_TABLE | FLOOR_KITCHEN, # Dinner COCINA/TABLE/SALON/DORMITORIO
-    8: {"C02","C05","POT DRAWER","FRIDGE","FOOD CUPBOARD"} | FLOOR_KITCHEN|FLOOR_SOFA, # Eat a snack 
+    6: {"C02","C05","S09", "C14","POT DRAWER","FRIDGE","FOOD CUPBOARD","BED"} | FLOOR_TABLE | FLOOR_KITCHEN, # Lunch COCINA/TABLE/SALON/DORMITORIO
+    7: {"C02","C05","S09", "C14","C09","D02","POT DRAWER","FRIDGE","FOOD CUPBOARD","BED"} | FLOOR_TABLE | FLOOR_KITCHEN, # Dinner COCINA/TABLE/SALON/DORMITORIO
+    8: {"C02","C05","S09", "C14","POT DRAWER","FRIDGE","FOOD CUPBOARD","BED"} | FLOOR_KITCHEN|FLOOR_BED|FLOOR_SOFA|FLOOR_TABLE, # Eat a snack 
     9: {"TV0","S09","TV CONTROLLER"} | FLOOR_SOFA | FLOOR_TABLE,                   # Watch TV SOFA/TABLE
     10: {"M01","01,10","01,08","01,09","02,10","02,08","02,09","02,07","BED"} | FLOOR_KITCHEN|FLOOR_BED|FLOOR_BATHROOM|FLOOR_SOFA|FLOOR_TABLE,   # Enter the SmartLab ENTRADA
     11: {"C07","S09","TV CONTROLLER","04,04"} | FLOOR_SOFA,                  # Play a videogame 
@@ -98,9 +103,6 @@ ACTIVITY_SENSORS = {
     23: {"C14","SM3","C13","04,05","03,06","WARDROBE DOOR","PYJAMA DRAWER","03,05","BED"} | FLOOR_BED,                                       # Go to the bed
     24: {"C14","BED"} | FLOOR_BED,                                       # Wake up
 }
-
-from collections import Counter, defaultdict
-
 def check_errors(df, ACTIVITY_SENSORS):
     error_counter = Counter()
     error_by_activity = defaultdict(Counter)
@@ -143,53 +145,21 @@ print(f"Sensores eliminados: {sensors_to_drop}")
 # --- 3ª pasada: comprobar de nuevo ---
 error_counter2, error_by_activity2, bad_rows2 = check_errors(df_clean, ACTIVITY_SENSORS)
 
-#for sensor, count in error_counter2.most_common():
-#    print(f"{sensor}: {count}")
-    # Mostrar el desglose por actividad
-#    for activity, counter in error_by_activity2.items():
-#        if sensor in counter:
-#            print(f"    {activity}: {counter[sensor]}")
 print(f"\nFilas con errores: {len(bad_rows2)}")
-
-# Lista de variables en tu dataset
-#variables = df.columns.tolist()
-
-# Nodo objetivo
-#target_node = 'Activity'
-
-# Crear lista negra de aristas salientes desde el nodo objetivo
-#black_list = [(target_node, var) for var in variables if var != target_node]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-df = df_clean
-#df = df.drop(columns=['ACTIVITY_ANTERIOR'])
+#df=df_clean
+# Dividir en train (70%) y test (30%) de forma estratificada en 'Activity'
+train_df, df_val = train_test_split(df, test_size=0.20, random_state=40, stratify=df['Activity'])
 # Eliminamos las filas que tienen un valor 0 en la columna 'Activity'
-df = df[df['Activity'] != 0] 
+#train_df = train_df[train_df['Activity'] != 0] 
+
+
 # --------
 # MODELO
 # --------
 
 # Aprender la estructura de la red bayesiana
-hc = HillClimbSearch(df)
-model = hc.estimate(scoring_method='k2score', max_indegree=10)
+hc = HillClimbSearch(train_df)
+model = hc.estimate(scoring_method='k2score', max_indegree=9)
 
 # Visualización de la estructura aprendida
 G = nx.DiGraph(model.edges())
@@ -200,9 +170,25 @@ plt.show()
 
 # Ajustar el modelo a los datoss
 bn = DiscreteBayesianNetwork(model.edges())
-bn.fit(df, estimator=MaximumLikelihoodEstimator)
+bn.fit(train_df, estimator=MaximumLikelihoodEstimator)
 
-# Guardar modelo entrenado
-with open(f"modelo_k2_{letter}.pkl", "wb") as f:
-    pickle.dump(bn, f)
+# -------------
+# PREDICCIONES
+# -------------
+infer = VariableElimination(bn)
+model_vars = list(bn.nodes())  # Variables que el modelo sí conoce
+model_vars.remove('Activity')  # Queremos predecir esta
+correct = 0
+
+for _, row in df_val.iterrows():
+    # Filtrar solo columnas que están en el modelo
+    evidence = row[model_vars].to_dict()
+    prediction = infer.map_query(['Activity'], evidence=evidence)
+    if prediction['Activity'] == row['Activity']:
+        correct += 1
+
+accuracy = correct / len(df_val)
+
+print(f"Accuracy en validación: {accuracy:.2%}")
+
 

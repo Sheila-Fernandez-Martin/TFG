@@ -108,37 +108,6 @@ def dicts_s_a(sensors, activities, floor):
     Returns:
         data -- A dictionary with timestamps as keys and a list of sensor states and activities as values.
     """
-    sensor_open_close = {
-        'C01': {'open': 'Open', 'close': 'Close'}, 
-        'C02': {'open': 'Open', 'close': 'Close'}, 
-        'C04': {'open': 'Open', 'close': 'Close'}, 
-        'C05': {'open': 'Open', 'close': 'Close'}, 
-        'C07': {'open': 'No present', 'close': 'Present'}, 
-        'C08': {'open': 'Open', 'close': 'Close'}, 
-        'C09': {'open': 'Open', 'close': 'Close'}, 
-        'C10': {'open': 'Open', 'close': 'Close'}, 
-        'C12': {'open': 'No present', 'close': 'Present'}, 
-        'C13': {'open': 'Open', 'close': 'Close'}, 
-        'C14': {'open': 'Pressure', 'close': 'No Pressure'}, 
-        'D01': {'open': 'Open', 'close': 'Close'}, 
-        'D02': {'open': 'Open', 'close': 'Close'}, 
-        'D03': {'open': 'Open', 'close': 'Close'}, 
-        'D04': {'open': 'Open', 'close': 'Close'}, 
-        'D05': {'open': 'Open', 'close': 'Close'}, 
-        'D07': {'open': 'Open', 'close': 'Close'}, 
-        'D08': {'open': 'Open', 'close': 'Close'}, 
-        'D09': {'open': 'Open', 'close': 'Close'}, 
-        'D10': {'open': 'Open', 'close': 'Close'}, 
-        'H01': {'open': 'Open', 'close': 'Close'}, 
-        'M01': {'open': 'Open', 'close': 'Close'}, 
-        'S09': {'open': 'Pressure', 'close': 'No Pressure'}, 
-        'SM1': {'open': 'Movement', 'close': 'No movement'}, 
-        'SM3': {'open': 'Movement', 'close': 'No movement'}, 
-        'SM4': {'open': 'Movement', 'close': 'No movement'}, 
-        'SM5': {'open': 'Movement', 'close': 'No movement'}, 
-        'TV0': {'open': 'Open', 'close': 'Close'}
-    }
-
     timestamps = [x.split(" ")[1] for x in sensors["TIMESTAMP"].to_list()]
     # Crea una lista con los sensores del df sensors
     objects = sensors["OBJECT"].to_list()
@@ -157,6 +126,7 @@ def dicts_s_a(sensors, activities, floor):
     # Ponemos ambos timestamps en el mismo formato: 'HH:MM:SS'
     timestamps = [x.split(".")[0] for x in timestamps]
     timestamps_floor = [x.split(".")[0] for x in timestamps_floor]
+
 
     suelos = floor["DEVICE"].to_list()
     # Crea una lista con los dispositivos del df floor
@@ -196,9 +166,89 @@ def dicts_s_a(sensors, activities, floor):
     for i in range(len(timestamps_floor)):
         dic3[suelos[i]].append((timestamps_floor[i]))
 
-    return dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2, objects
+    return dic1, dic2, dic3, timestamps, timestamps_floor,t1, t2, objects
 
-def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2,objects, global_sensors):
+def dicts_s_a_prox(sensors, activities, floor, proximity):
+    """
+    Creates a dictionary with keys the timestamps and values the activity and sensors at that time.
+    Arguments:
+        sensors -- A DataFrame containing sensor data with columns 'TIMESTAMP', 'OBJECT', and 'STATE'.
+        activities -- A DataFrame containing activity data with columns 'DATE BEGIN', 'DATE END', and 'ACTIVITY'.
+    Returns:
+        data -- A dictionary with timestamps as keys and a list of sensor states and activities as values.
+    """
+    timestamps = [x.split(" ")[1] for x in sensors["TIMESTAMP"].to_list()]
+    # Crea una lista con los sensores del df sensors
+    objects = sensors["OBJECT"].to_list()
+    # Crea una lista con los estados del df sensors
+    states = sensors["STATE"].to_list()
+    #if states[0] == sensor_open_close[objects[0]]['close']:
+    #    timestamps.pop(0)  # Remove the first timestamp if the first state is 'close'
+    #    objects.pop(0)  # Remove the first object if the first state is 'close'
+    #    states.pop(0)  # Remove the first state if the first state is 'close'
+    #if states[-1] == sensor_open_close[objects[-1]]['open']:
+    #    timestamps.pop(-1)
+    #    objects.pop(-1)  # Remove the last object if the last state is 'open'
+    #    states.pop(-1)  # Remove the last state if the last state is 'open'
+    timestamps_floor = [x.split(" ")[1] for x in floor["TIMESTAMP"].to_list()]
+    # Redondear al segundo más cercano
+    timestamps_prox = [x.split(" ")[1] for x in proximity["TIMESTAMP"].to_list()]
+
+    # Ponemos ambos timestamps en el mismo formato: 'HH:MM:SS'
+    timestamps = [x.split(".")[0] for x in timestamps]
+    timestamps_floor = [x.split(".")[0] for x in timestamps_floor]
+    timestamps_prox = [x.split(".")[0] for x in timestamps_prox]
+
+
+    suelos = floor["DEVICE"].to_list()
+    objects_prox = proximity["OBJECT"].to_list()
+    # Crea una lista con los dispositivos del df floor
+    devices = [f"{i+1:02d},{j+1:02d}" for i in range(5) for j in range(10)]  # Asumiendo 5 filas y 9 columnas
+
+    # Crea una lista con todas las horas de inicio (t1) y de fin (t2) del df activities 
+    t1 = [x.split(" ")[1] for x in activities["DATE BEGIN"].to_list()]
+    t2 = [x.split(" ")[1] for x in activities["DATE END"].to_list()]
+
+    t1 = [x.split(".")[0] for x in t1]
+    t2 = [x.split(".")[0] for x in t2]
+
+    # Crea una lista con SOLO las actividades
+    acts = activities["ACTIVITY"].to_list()
+    
+    # Crea dic1 para los sensores y dic2 para actividades 
+    dic1,dic2,dic3,dic4 = {},{},{},{}
+
+    for s in set(objects):
+        dic1[s] = []
+
+    for a in set(acts):
+        dic2[a] = []
+
+    for d in set(devices):
+        dic3[d] = []
+
+    for p in set(objects_prox):
+        dic4[p] = []
+
+    # A dic1 le asocia como claves los sensores y como valores una lista de tuplas (estado, hora)
+    for i in range(len(timestamps)):
+        dic1[objects[i]].append((states[i],timestamps[i]))
+
+    # A dic2 le asocia como claves las actividades y como valores una lista de tuplas (inicio, fin)
+    for i in range(len(t1)):
+        dic2[acts[i]].append((t1[i],t2[i]))
+        
+    # A dic3 le asocia como claves los dispositivos y como valores una lista de tuplas (hora)
+    for i in range(len(timestamps_floor)):
+        dic3[suelos[i]].append((timestamps_floor[i]))
+
+    # A dic4 le asocia como claves los dispositivos y como valores una lista de tuplas (hora)
+    for i in range(len(timestamps_prox)):
+        dic4[objects_prox[i]].append((timestamps_prox[i]))
+
+    return dic1, dic2, dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2, objects
+
+def sensor_activity(dic1, dic2, dic3,timestamps, timestamps_floor, t1, t2,objects, global_sensors):
     """
     Creates a dictionary with keys the timestamps and values the activity and sensors at that time.
     Arguments:
@@ -250,7 +300,6 @@ def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2,objec
             data[t] = [activity] + active_devices
         else:
             data[t] = [activity]
-        
 
     for elem in dic1:
         events = dic1[elem]
@@ -291,6 +340,110 @@ def sensor_activity(dic1, dic2, dic3, timestamps, timestamps_floor, t1, t2,objec
     df = pd.DataFrame(data_pd, columns=sorted_list_of_sensors+devices+["Activity"])
     return df
 
+def sensor_activity_prox(dic1, dic2, dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2,objects, global_sensors):
+    """
+    Creates a dictionary with keys the timestamps and values the activity and sensors at that time.
+    Arguments:
+        sensors -- A dictionari.
+        activities -- A DataFrame containing activity data with columns 'DATE BEGIN', 'DATE END', and 'ACTIVITY'.
+    """
+
+    sensor_open_close = {
+        'C01': {'open': 'Open', 'close': 'Close'}, 
+        'C02': {'open': 'Open', 'close': 'Close'}, 
+        'C04': {'open': 'Open', 'close': 'Close'}, 
+        'C05': {'open': 'Open', 'close': 'Close'}, 
+        'C07': {'open': 'No present', 'close': 'Present'}, 
+        'C08': {'open': 'Open', 'close': 'Close'}, 
+        'C09': {'open': 'Open', 'close': 'Close'}, 
+        'C10': {'open': 'Open', 'close': 'Close'}, 
+        'C12': {'open': 'No present', 'close': 'Present'}, 
+        'C13': {'open': 'Open', 'close': 'Close'}, 
+        'C14': {'open': 'Pressure', 'close': 'No Pressure'}, 
+        'D01': {'open': 'Open', 'close': 'Close'}, 
+        'D02': {'open': 'Open', 'close': 'Close'}, 
+        'D03': {'open': 'Open', 'close': 'Close'}, 
+        'D04': {'open': 'Open', 'close': 'Close'}, 
+        'D05': {'open': 'Open', 'close': 'Close'}, 
+        'D07': {'open': 'Open', 'close': 'Close'}, 
+        'D08': {'open': 'Open', 'close': 'Close'}, 
+        'D09': {'open': 'Open', 'close': 'Close'}, 
+        'D10': {'open': 'Open', 'close': 'Close'}, 
+        'H01': {'open': 'Open', 'close': 'Close'}, 
+        'M01': {'open': 'Open', 'close': 'Close'}, 
+        'S09': {'open': 'Pressure', 'close': 'No Pressure'}, 
+        'SM1': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM3': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM4': {'open': 'Movement', 'close': 'No movement'}, 
+        'SM5': {'open': 'Movement', 'close': 'No movement'}, 
+        'TV0': {'open': 'Open', 'close': 'Close'}
+    }
+
+    tbegin,tend = min(timestamps[0],t1[0],timestamps_floor[0],timestamps_prox[0]),max(timestamps[-1],t2[-1],timestamps_floor[-1],timestamps_prox[-1])
+    #tbegin,tend = t1[0],t2[-1] NO GENERA CAMBIOS
+
+    # Convertimos 
+    data = {}
+
+    #for t in enumerate_seconds(tbegin,tend):
+    #    activity = getActivity(dic2, t)
+    #    active_devices = [device for device, times in dic3.items() if t in times]
+    #    if len(active_devices) != 0:
+    #        data[t] = [activity] + active_devices
+    #    else:
+    #        data[t] = [activity]
+
+    for t in enumerate_seconds(tbegin, tend):
+        activity = getActivity(dic2, t)
+        active_devices = []
+        for dic in (dic3, dic4):
+            active_devices.extend([device for device, times in dic.items() if t in times])
+        if len(active_devices) != 0:
+            data[t] = [activity] + active_devices
+        else:
+            data[t] = [activity]
+
+    for elem in dic1:
+        events = dic1[elem]
+
+        if len(events) > 1:
+                for i in range(len(events)-1):
+                    if i==0: 
+                        if events[i][0] == sensor_open_close[elem]['close']:
+                            start_time = tbegin
+                            end_time = events[i][1]
+                            for t in enumerate_seconds(start_time, end_time):
+                                if t in data:
+                                    data[t].append(elem) 
+
+                    elif events[i][0] == sensor_open_close[elem]['open']:
+                        start_time = events[i][1]
+                        end_time = events[i + 1][1]
+                        for t in enumerate_seconds(start_time, end_time):
+                            if t in data:
+                                data[t].append(elem)
+
+                if events[-1][0] == sensor_open_close[elem]['open']:
+                    start_time = events[i][1]
+                    end_time = tend
+                    for t in enumerate_seconds(start_time, end_time):
+                        if t in data:
+                            data[t].append(elem)
+
+
+    data_pd = []
+    all_sen = all_sensors()
+    all_objects_prox = all_objects_prox_df()
+    sorted_list_of_sensors = sorted(all_sen)
+    sorted_list_of_sensors_prox = sorted(all_objects_prox)
+    devices = [f"{i+1:02d},{j+1:02d}" for i in range(5) for j in range(10)]  # Asumiendo 5 filas y 9 columnas
+
+    for t in enumerate_seconds(tbegin,tend):
+        # Crea una lista binaria + número de actividad
+        data_pd.append(create_bit_vector(sorted_list_of_sensors+devices+sorted_list_of_sensors_prox,data[t][:])+[create_act_number(data[t][0])])
+    df = pd.DataFrame(data_pd, columns=sorted_list_of_sensors+devices+sorted_list_of_sensors_prox+["Activity"])
+    return df
+
 def clean_repeats(df):
 
     """
@@ -310,6 +463,7 @@ def clean_repeats(df):
     df_cleaned.drop(index=remove_indices, inplace=True)
 
     return df_cleaned.reset_index(drop=True)
+
 def clean_repeats_activity0(df):
 
     """
@@ -358,3 +512,28 @@ def all_acivities():
                   'Act18', 'Act19', 'Act20', 'Act21', 'Act22', 'Act23',
                   'Act24']
     return activities   
+
+def all_objects_prox_df():
+    """
+    Returns a set of all activities used in the dataset, Training and test.
+    Returns:
+        activities -- A set of all activities.
+    """
+    objects_prox = [
+        "TV CONTROLLER",
+        "BOOK",
+        "ENTRANCE DOOR",
+        "MEDICINE BOX",
+        "FOOD CUPBOARD",
+        "FRIDGE",
+        "POT DRAWER",
+        "WATER BOTTLE",
+        "GARBAGE CAN",
+        "WARDROBE DOOR",
+        "PYJAMA DRAWER",
+        "BED",
+        "BATHROOM TAP",
+        "TOOTHBRUSH",
+        "LAUNDRY BASKET"
+    ]
+    return objects_prox   

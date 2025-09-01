@@ -76,4 +76,4 @@ def graf_open_close_sensor(i, letter, sensor, dset = 'Training2'):
     plt.tight_layout()
     plt.show()
 
-graf_open_close_sensor(0,'A','C14')
+graf_open_close_sensor(1,'A','C14')

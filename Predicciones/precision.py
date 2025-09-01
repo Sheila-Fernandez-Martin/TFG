@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 days = ['2017-11-09', '2017-11-13', '2017-11-21']
 
-i,letter= 0,'C'
+i,letter= 0,'A'
 
 # Ruta del GT
 gt = pd.read_csv(f'Data\\Test2\\{days[i]}\\{days[i]}-{letter}\\{days[i]}-{letter}-activity.csv', sep=',')
@@ -33,11 +33,9 @@ gt["TIMESTAMP"] = ts_parsed
 # Tomamos el primero (mínimo) ignorando NaT
 start_ts = gt["TIMESTAMP"].dropna().min()
 
-print("Primer TIMESTAMP del GT:", start_ts)
-
 gt_valid = gt.dropna(subset=["TIMESTAMP"]).copy()
-if gt_valid.empty:
-    raise ValueError("GT no contiene TIMESTAMP válidos.")
+#if gt_valid.empty:
+#    raise ValueError("GT no contiene TIMESTAMP válidos.")
 
 end_ts = gt_valid["TIMESTAMP"].max()
 
@@ -54,11 +52,10 @@ if calc_end != end_ts:
 df_30s = pd.DataFrame({
     "TIMESTAMP": timestamps_30s,
     "Activity_1": pd.Series([np.nan] * n_rows_gt, dtype="object"),
-    "Activity_2": pd.Series([np.nan] * n_rows_gt, dtype="object"),
 })
 
 
-# --- Paso 3: rellenar Activity_1 y Activity_2 en df_30s con el top-2 de PREDICCION por intervalo de 30s ---
+# --- Paso 3: rellenar Activity_1 en df_30s con el top-1 de PREDICCION por intervalo de 30s ---
 
 # 1) Asegurar que df_predicciones tiene TIMESTAMP bien parseado y alinear fecha si hiciera falta
 dfp = df_predicciones.copy()
@@ -107,7 +104,7 @@ top2 = counts[counts["rank"] <= 2].copy()
 # Pasar a columnas Activity_1 / Activity_2
 pivot = (
     top2.pivot(index="__BIN__", columns="rank", values="PREDICCION")
-        .rename(columns={1: "Activity_1", 2: "Activity_2"})
+        .rename(columns={1: "Activity_1"})
         .reset_index()
         .rename(columns={"__BIN__": "TIMESTAMP"})
 )
@@ -115,24 +112,19 @@ pivot = (
 # 5) Volcar al df_30s (alineando por TIMESTAMP)
 df_30s = df_30s.set_index("TIMESTAMP")
 pivot  = pivot.set_index("TIMESTAMP")
-df_30s[["Activity_1", "Activity_2"]] = pivot[["Activity_1", "Activity_2"]]
+df_30s[["Activity_1"]] = pivot[["Activity_1"]]
 df_30s = df_30s.reset_index()
 
 # --- Paso 3.1: Post-procesado de df_30s según reglas ---
 # Asegurar tipo objeto para no tener problemas con NaN/strings
 df_30s["Activity_1"] = df_30s["Activity_1"].astype("object")
-df_30s["Activity_2"] = df_30s["Activity_2"].astype("object")
 
 # Regla 2: si no hubo ninguna predicción en el intervalo (NaN), usar Idle
 df_30s["Activity_1"] = df_30s["Activity_1"].fillna("Idle")
 
-# Regla 1: si Activity_2 es NaN, copiar Activity_1 (ya sea ActXX o Idle)
-df_30s["Activity_2"] = df_30s["Activity_2"].fillna(df_30s["Activity_1"])
-
 # 6) (Opcional) informe rápido
-n_total  = len(df_30s)
-n_empty  = int(df_30s["Activity_1"].isna().sum())
-print(df_30s)
+#n_total  = len(df_30s)
+#n_empty  = int(df_30s["Activity_1"].isna().sum())
 
 out_dir = Path("Predicciones") / "Data_predicciones" /str(days[i])
 out_dir.mkdir(parents=True, exist_ok=True)
@@ -169,37 +161,120 @@ def norm_label(v):
 # 2) Predicciones: mapea tus dos columnas
 pred = df_30s.rename(columns={"TIMESTAMP": "TIMESTAMP"}).copy()
 pred["Pred1"] = pred["Activity_1"].apply(norm_label)
-pred["Pred2"] = pred["Activity_2"].apply(norm_label)
 
 # 3) Ground truth: toma sus dos columnas
 gt_ref = gt.copy()
 gt_ref["GT1"] = gt_ref["Activity_1"].apply(norm_label)
-gt_ref["GT2"] = gt_ref["Activity_2"].apply(norm_label)
 
 # 4) Unir por TIMESTAMP
 comp = pd.merge(
-    gt_ref[["TIMESTAMP", "GT1", "GT2"]],
-    pred[["TIMESTAMP", "Pred1", "Pred2"]],
+    gt_ref[["TIMESTAMP", "GT1"]],
+    pred[["TIMESTAMP", "Pred1"]],
     on="TIMESTAMP",
     how="left"
 )
 
 # Completar predicciones faltantes con Idle
 comp["Pred1"] = comp["Pred1"].fillna("Idle")
-comp["Pred2"] = comp["Pred2"].fillna("Idle")
+#comp["Pred2"] = comp["Pred2"].fillna("Idle")
 
 # 5) Acierto si cualquiera coincide
 comp["correct"] = (
-    (comp["Pred1"] == comp["GT1"]) |
-    (comp["Pred1"] == comp["GT2"]) |
-    (comp["Pred2"] == comp["GT1"]) |
-    (comp["Pred2"] == comp["GT2"])
+    (comp["Pred1"] == comp["GT1"]) #|
+    #(comp["Pred1"] == comp["GT2"]) |
+    #(comp["Pred2"] == comp["GT1"]) |
+    #(comp["Pred2"] == comp["GT2"])
 )
 
 acc = comp["correct"].mean()
 print(f"Accuracy 30s (match en cualquiera de las dos): {acc:.2%}")
 
 # (Opcional) primeras discrepancias
-errores = comp[~comp["correct"]][["TIMESTAMP", "GT1", "GT2", "Pred1", "Pred2"]]
+errores = comp[~comp["correct"]][["TIMESTAMP", "GT1", "Pred1"]]
 print("\nPrimeras discrepancias:")
-print(errores.head(10))
+print(errores.head(20))
+
+
+
+
+# PREDICCIONES POR CADA SEGUNDO 
+
+def expand_30s_to_seconds(df, ts_col="TIMESTAMP",
+                          activity_cols=("ACTIVITY_1","ACTIVITY_2"),
+                          seconds=30):
+    # 1) asegurar datetime y ordenar
+    df = df.copy()
+    df[ts_col] = pd.to_datetime(df[ts_col])  # soporta con o sin fecha
+    df = df.sort_values(ts_col)
+
+    rows = []
+    for _, r in df.iterrows():
+        start = r[ts_col]
+        # intervalo: start, start+1s, ..., start+seconds-1s
+        sec_range = pd.date_range(start=start, periods=seconds, freq="s")
+        block = pd.DataFrame({
+            ts_col: sec_range,
+            activity_cols[0]: r[activity_cols[0]],
+            activity_cols[1]: r[activity_cols[1]],
+        })
+        rows.append(block)
+
+    out = pd.concat(rows, ignore_index=True)
+    return out
+
+# ejemplo de uso:
+df_in = pd.read_csv(f'Data\\Test2\\{days[i]}\\{days[i]}-{letter}\\{days[i]}-{letter}-activity.csv', sep=',')
+df_out = expand_30s_to_seconds(df_in, ts_col="TIMESTAMP",
+                               activity_cols=("Activity_1","Activity_2"),
+                               seconds=30)
+
+# si quieres solo HH:MM:SS:
+# df_out["TIMESTAMP"] = df_out["TIMESTAMP"].dt.strftime("%H:%M:%S")
+gt=df_out
+df_pred = pd.read_csv(f'Predicciones\\Data_predicciones\\{days[i]}\\{days[i]}-{letter}-predicciones.csv', sep=',')
+
+
+
+# 1) Normaliza a datetime por si acaso
+gt["TIMESTAMP"] = pd.to_datetime(gt["TIMESTAMP"], errors="coerce")
+df_pred["TIMESTAMP"] = pd.to_datetime(df_pred["TIMESTAMP"], errors="coerce")
+
+gt = gt.dropna(subset=["TIMESTAMP"]).sort_values("TIMESTAMP").reset_index(drop=True)
+df_pred = df_pred.dropna(subset=["TIMESTAMP"]).sort_values("TIMESTAMP").reset_index(drop=True)
+
+# 2) Columna TIME con HH:MM:SS (sin fecha)
+gt["TIME"] = gt["TIMESTAMP"].dt.strftime("%H:%M:%S")
+df_pred["TIME"] = df_pred["TIMESTAMP"].dt.strftime("%H:%M:%S")
+
+# 3) Normalizar etiquetas
+def norm_label(v):
+    if pd.isna(v):
+        return "Idle"
+    s = str(v).strip()
+    if s == "" or s == "0":
+        return "Idle"
+    try:
+        n = int(float(s))
+        return f"Act{n}"
+    except Exception:
+        return s
+
+pred = df_pred[["TIME", "PREDICCION"]].copy()
+pred["Pred1"] = pred["PREDICCION"].apply(norm_label)
+pred = pred.drop_duplicates(subset=["TIME"])[["TIME", "Pred1"]]
+
+gt_ref = gt[["TIME", "Activity_1"]].copy()
+gt_ref["GT1"] = gt_ref["Activity_1"].apply(norm_label)
+gt_ref = gt_ref[["TIME", "GT1"]]
+
+# 4) Merge por TIME
+comp = pd.merge(gt_ref, pred, on="TIME", how="left")
+comp["Pred1"] = comp["Pred1"].fillna("Idle")
+
+comp["correct"] = (comp["Pred1"] == comp["GT1"])
+acc = comp["correct"].mean()
+print(f"Accuracy por segundo (Pred Activity_1 == GT Activity_1): {acc:.2%}")
+
+# Errores
+errores = comp[~comp["correct"]].head(20)
+print(errores)

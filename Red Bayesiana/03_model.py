@@ -3,62 +3,56 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 from pgmpy.estimators import HillClimbSearch
-from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.estimators import MaximumLikelihoodEstimator, BayesianEstimator, ExpectationMaximization
-from pgmpy.inference import VariableElimination
-from sklearn.model_selection import train_test_split
+from pgmpy.models import BayesianNetwork as DiscreteBayesianNetwork
+from pgmpy.estimators import MaximumLikelihoodEstimator
+import pickle
 
-import pandas as pd
-from sklearn.model_selection import train_test_split
+# MODELO K2  
+# -------------------------
+# PREPARACIÓN DE LOS DATOS
+# -------------------------
 
-letter = 'A'
-df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',', index_col=0)
+# A, 15
+# B, 9
+# C, 14
+
+letter = 'C'  # Cambiar según la letra
+# Cargamos los datos
+df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',')
 
 # Eliminamos la ultima columna que no contiene información relevante
 df = df.drop(columns=['DAY'])
 # Eliminamos las filas que tienen un valor 0 en la columna 'Activity'
-df = df[df['Activity'] != 0]
+# df = df[df['Activity'] != 0]
 
-# Dividimos ahora trainval en train y validación
-df_train, df_val = train_test_split(df, test_size=0.16, random_state=40, stratify=df['Activity'])
+# Lista de variables en tu dataset
+variables = df.columns.tolist()
+
+# Nodo objetivo
+target_node = 'Activity'
+
+# Crear lista negra de aristas salientes desde el nodo objetivo
+black_list = [(target_node, var) for var in variables if var != target_node]
+
+# --------
+# MODELO
+# --------
 
 # Aprender la estructura de la red bayesiana
-hc = HillClimbSearch(df_train)
-model = hc.estimate(scoring_method='bic-d', epsilon=1e-13, max_iter=1e6)
+hc = HillClimbSearch(df)
+model = hc.estimate(scoring_method='bicscore')
 
-bn = DiscreteBayesianNetwork(model.edges())
-bn.fit(df_train, estimator=MaximumLikelihoodEstimator, n_jobs=7)
-
-infer = VariableElimination(bn)
-
-
-model_vars = list(bn.nodes())  # Variables que el modelo sí conoce
-model_vars.remove('Activity')  # Queremos predecir esta
-print(model_vars)
-correct = 0
-predictions = []
-
-for _, row in df_val.iterrows():
-    # Filtrar solo columnas que están en el modelo
-    evidence = row[model_vars].to_dict()
-    prediction = infer.map_query(['Activity'], evidence=evidence)
-    predictions.append(prediction['Activity'])
-    if prediction['Activity'] == row['Activity']:
-        correct += 1
-
-accuracy = correct / len(df_val)
-# Calculamos las frecuencias de las predicciones
-pred = list(set(predictions))
-frecuencias = {p: predictions.count(p) for p in pred}
-print(f"\n\033[1;32mPrecisión del modelo: {accuracy:.2%}\033[0m")
-print(f"\033[1;34mPredicciones\033[0m:")
-for pred in frecuencias:
-    print(f"{pred}: {frecuencias[pred]} veces")
-
-# model es un objeto pgmpy.base.DAG
+# Visualización de la estructura aprendida
 G = nx.DiGraph(model.edges())
-
 plt.figure(figsize=(10, 8))
-nx.draw(G, with_labels=True, node_color='lightblue', edge_color='gray', node_size=2000, font_size=12)
+nx.draw(G, with_labels=True, node_color="#00FAC0", edge_color='gray', node_size=2000, font_size=12)
 plt.title("Estructura aprendida (DAG)")
 plt.show()
+
+# Ajustar el modelo a los datos
+bn = DiscreteBayesianNetwork(model.edges())
+bn.fit(df, estimator=MaximumLikelihoodEstimator)
+
+# Guardar modelo entrenado
+with open(f"modelo_k2_{letter}_bic.pkl", "wb") as f:
+    pickle.dump(bn, f)
