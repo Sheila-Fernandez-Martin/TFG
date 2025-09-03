@@ -5,7 +5,7 @@ Se trabaja con datos reales recogidos por sensores, un suelo inteligente, baliza
 
 
 ## 📂 Estructura del proyecto
-
+```
 Data/
 ├── Test/
 │   ├── 2017-11-9/
@@ -65,7 +65,7 @@ Red Bayesiana/
 └── 04_Model.ipynb               # Análisis y resultados del mejor modelo
 
 README.md                        # Este documento
-
+```
 
 ## 📊 Flujo de trabajo
 
