@@ -66,8 +66,9 @@ for letter in ["A", "B", "C"]:
         dic1, dic2, dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2, objects = dicts_s_a_prox(sensors, activities, floor, objects_prox)
         # Creamos un DataFrame con los datos
         df = sensor_activity_prox(dic1, dic2,dic3, dic4, timestamps, timestamps_floor, timestamps_prox, t1, t2, objects, global_sensors)
-        #df= clean_repeats(df) 
-        df = clean_repeats_activity0(df) #comprime solo las 0
+        #df, error_counter, error_by_activity, bad_rows = check_errors(df, ACTIVITY_SENSORS, fix=True)
+        df= clean_repeats(df) 
+        #df = clean_repeats_activity0(df) #comprime solo las 0
 
         # Añadimos el DataFrame a la lista
         DATA.append(df)
@@ -77,10 +78,10 @@ for letter in ["A", "B", "C"]:
     
     # Unimos todos los DataFrames por filas en uno solo
     final_df = pd.concat(DATA, ignore_index=True)
-    final_df["Activity"] = pd.to_numeric(final_df["Activity"], errors="coerce").fillna(0).astype(int)
-    final_df["ACTIVITY_ANTERIOR"] = final_df["Activity"].shift(1, fill_value=0).astype(int)
-    cols = list(final_df.columns)
-    cols.insert(cols.index("Activity")+1, cols.pop(cols.index("ACTIVITY_ANTERIOR")))
-    final_df = final_df[cols]   
+    #final_df["Activity"] = pd.to_numeric(final_df["Activity"], errors="coerce").fillna(0).astype(int)
+    #final_df["ACTIVITY_ANTERIOR"] = final_df["Activity"].shift(1, fill_value=0).astype(int)
+    #cols = list(final_df.columns)
+    #cols.insert(cols.index("Activity")+1, cols.pop(cols.index("ACTIVITY_ANTERIOR")))
+    #final_df = final_df[cols]   
     # Guardamos el DataFrame en un archivo CSV
     final_df.to_csv(f'Red Bayesiana/Data/data_{letter}.csv', index=False)

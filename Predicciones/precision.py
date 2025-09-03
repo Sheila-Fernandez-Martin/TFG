@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 days = ['2017-11-09', '2017-11-13', '2017-11-21']
 
-i,letter= 0,'A'
+i,letter= 2,'A'
 
 # Ruta del GT
 gt = pd.read_csv(f'Data\\Test2\\{days[i]}\\{days[i]}-{letter}\\{days[i]}-{letter}-activity.csv', sep=',')
@@ -181,7 +181,7 @@ comp["Pred1"] = comp["Pred1"].fillna("Idle")
 # 5) Acierto si cualquiera coincide
 comp["correct"] = (
     (comp["Pred1"] == comp["GT1"]) #|
-    #(comp["Pred1"] == comp["GT2"]) |
+    #(comp["Pred1"] == comp["GT2"]) 
     #(comp["Pred2"] == comp["GT1"]) |
     #(comp["Pred2"] == comp["GT2"])
 )

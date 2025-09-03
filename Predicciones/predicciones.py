@@ -87,11 +87,10 @@ for letter in ["A", "B", "C"]:
         
 
 
-# --------
 # MODELO
 # --------
 
-i,letter= 0,'A'
+i,letter= 2,'A'
 
 with open(f"modelo_k2_{letter}.pkl", "rb") as f:
     bn = pickle.load(f)
@@ -101,16 +100,20 @@ with open(f"modelo_k2_{letter}.pkl", "rb") as f:
 df_test = pd.read_csv(f'Predicciones\\Data_test\\{days[i]}\\{days[i]}-{letter}.csv', sep=',')
 df_test = df_test.drop(columns=['DAY'])
 #df_test = df_test.drop(columns=['SM3', 'SM4', '01,07', 'D02', 'SM1', 'SM5', 'C14', 'C13'])
+#DEVICES = [ f"0{i+1},0{j+1}" for i in range(5) for j in range(9) ]
+
+#df_test = df_test.drop(columns=DEVICES)
+#df_test = df_test.drop(columns=['01,10','02,10','03,10','04,10','05,10'])
 
 # -------------
 # PREDICCIONES
 # -------------
-
+import time
 # Variables del modelo (nodos de la BN)
 model_vars = list(bn.nodes())
 model_vars.remove('Activity')           # objetivo
 #PREV_VAR = 'ACTIVITY_ANTERIOR'          # ajusta si se llama distinto
-
+t1 = time.time()
 infer = VariableElimination(bn)
 #prev_act = 0
 
@@ -189,7 +192,9 @@ for _, row in df_test.iterrows():
     })
 # Convertimos a DataFrame
 df_predicciones = pd.DataFrame(predictions)
+t2 = time.time()
 
+print(t2-t1)
 def to_act2(v):
     s = str(v).strip()
     if s == "" or s == "0" or s.lower() == "idle":

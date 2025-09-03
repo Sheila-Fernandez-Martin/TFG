@@ -5,11 +5,7 @@ import networkx as nx
 from pgmpy.estimators import HillClimbSearch
 from pgmpy.models import BayesianNetwork as DiscreteBayesianNetwork
 from pgmpy.estimators import MaximumLikelihoodEstimator
-from sklearn.model_selection import train_test_split
-from pgmpy.inference import VariableElimination
-from collections import Counter, defaultdict
-
-
+import pickle
 
 # MODELO K2  
 # -------------------------
@@ -18,12 +14,19 @@ from collections import Counter, defaultdict
 
 letter = 'A'  # Cambiar según la letra
 # Cargamos los datos
-df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',',index_col=0)
+df = pd.read_csv(f'Red Bayesiana\\Data\\data_{letter}.csv', sep=',')
 
 # Eliminamos la ultima columna que no contiene información relevante
 df = df.drop(columns=['DAY'])
-# Dividir en train (70%) y test (30%) de forma estratificada en 'Activity'
-train_df, df_val = train_test_split(df, test_size=0.25, random_state=40, stratify=df['Activity'])
+#DEVICES = [ f"0{i+1},0{j+1}" for i in range(5) for j in range(9) ]
+
+#df = df.drop(columns=DEVICES)
+#df = df.drop(columns=['01,10','02,10','03,10','04,10','05,10'])
+#print(df)
+
+# ----------------------------
+# ZONAS DE SUELO
+# ----------------------------
 FLOOR_SOFA = {
     # Sofá en la parte superior izquierda (filas 01–02, cols 01–04)
     "01,01","01,02","01,03","01,04",
@@ -118,7 +121,7 @@ def check_errors(df, ACTIVITY_SENSORS):
 
 
 # --- 1ª pasada: detectar errores ---
-error_counter, error_by_activity, bad_rows = check_errors(train_df, ACTIVITY_SENSORS)
+error_counter, error_by_activity, bad_rows = check_errors(df, ACTIVITY_SENSORS)
 
 # --- 4. Resumen general ---
 print("\n--- Resumen de sensores mal colocados (ordenados) ---")
@@ -131,7 +134,7 @@ for sensor, count in error_counter.most_common():
 print(f"\nFilas con errores: {len(bad_rows)}")
 threshold = 40
 sensors_to_drop = [sensor for sensor, count in error_counter.items() if count > threshold]
-df_clean = train_df.drop(columns=sensors_to_drop)
+df_clean = df.drop(columns=sensors_to_drop)
 
 print(f"Sensores eliminados: {sensors_to_drop}")
 
@@ -155,50 +158,56 @@ print(f"\nFilas con errores: {len(bad_rows2)}")
 # Crear lista negra de aristas salientes desde el nodo objetivo
 #black_list = [(target_node, var) for var in variables if var != target_node]
 
-#train_df = df_clean
 
-#train_df = train_df[train_df['Activity'] != 0] 
 
-#df = df.drop(columns=['ACTIVITY_ANTERIOR'])
 
-#df = df.drop(columns=['SM4','SM3','SM1','SM5'])
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+df = df_clean
+#df = df.drop(columns=['SM1','SM3','SM4','SM5'])
+# Eliminamos las filas que tienen un valor 0 en la columna 'Activity'
+df = df[df['Activity'] != 0] 
 # --------
 # MODELO
 # --------
+import time
 
 # Aprender la estructura de la red bayesiana
-hc = HillClimbSearch(train_df)
-model = hc.estimate(scoring_method='k2score', max_indegree=10)
+hc = HillClimbSearch(df)
+t1 = time.time()
+
+model = hc.estimate(scoring_method='bicscore')
+t2 = time.time()
+
+print(t2-t1)
+
 
 # Visualización de la estructura aprendida
 G = nx.DiGraph(model.edges())
 plt.figure(figsize=(10, 8))
-nx.draw(G, with_labels=True, node_color="#00FAC0", edge_color='gray', node_size=2000, font_size=12)
+nx.draw(G, with_labels=True, node_color="#87CEFA", edge_color='gray', node_size=2000, font_size=12)
 plt.title("Estructura aprendida (DAG)")
 plt.show()
 
 # Ajustar el modelo a los datoss
 bn = DiscreteBayesianNetwork(model.edges())
-bn.fit(train_df, estimator=MaximumLikelihoodEstimator)
+bn.fit(df, estimator=MaximumLikelihoodEstimator)
 
-# -------------
-# PREDICCIONES
-# -------------
-infer = VariableElimination(bn)
-model_vars = list(bn.nodes())  # Variables que el modelo sí conoce
-model_vars.remove('Activity')  # Queremos predecir esta
-correct = 0
-
-for _, row in df_val.iterrows():
-    # Filtrar solo columnas que están en el modelo
-    evidence = row[model_vars].to_dict()
-    prediction = infer.map_query(['Activity'], evidence=evidence)
-    if prediction['Activity'] == row['Activity']:
-        correct += 1
-
-accuracy = correct / len(df_val)
-
-print(f"Accuracy en validación: {accuracy:.2%}")
-
+# Guardar modelo entrenado
+with open(f"modelo_k2_bic_{letter}.pkl", "wb") as f:
+    pickle.dump(bn, f)
 

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import os
-
+from collections import Counter, defaultdict
 
 ## First, some methods that I will need
 def enumerate_seconds(start_time_str, end_time_str):
@@ -537,3 +537,33 @@ def all_objects_prox_df():
         "LAUNDRY BASKET"
     ]
     return objects_prox   
+
+def check_errors(df, ACTIVITY_SENSORS, fix=True):
+    """
+    Revisa inconsistencias y, si fix=True, pone a 0 los sensores activos (1)
+    que no están permitidos para la actividad de esa fila.
+
+    """
+    error_counter = Counter()
+    error_by_activity = defaultdict(Counter)
+    bad_rows = set()
+
+    sensor_cols = [c for c in df.columns if c not in ("Activity", "DAY")]
+
+    for idx, row in df.iterrows():
+        activity = row["Activity"]
+        allowed = set(ACTIVITY_SENSORS.get(activity, []))
+
+        # sensores activos en la fila
+        active_sensors = [col for col in sensor_cols if row[col] == 1]
+
+        for sensor in active_sensors:
+            if sensor not in allowed:
+                bad_rows.add(idx)
+                error_counter[sensor] += 1
+                error_by_activity[activity][sensor] += 1
+                if fix:
+                    # corregimos en el propio df
+                    df.at[idx, sensor] = 0
+
+    return df, error_counter, error_by_activity, bad_rows
